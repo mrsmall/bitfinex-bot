@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="true">
+    <!--<turboFilter class="ch.qos.logback.classic.turbo.DuplicateMessageFilter" cacheSize="2" allowedRepetitions="1"/>-->
+
+    <appender name="console-debug" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>[%d{ddMMMyyyy HH:mm:ss.SSS}][%thread]: %-5level %logger{45} - %msg %n</pattern>
+        </encoder>
+    </appender>
+    <root level="TRACE">
+        <appender-ref ref="console-debug"/>
+    </root>
+</configuration>
