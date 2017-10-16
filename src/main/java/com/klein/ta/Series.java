@@ -40,6 +40,7 @@ public class Series {
     private double avgBid;
     private double avgAsk;
     private int maxBars;
+    private Core core=new Core();
 
     public Series(String product, Timeframe tf, int maxBars) {
         this.product = product;
@@ -265,6 +266,10 @@ public class Series {
         return date;
     }
 
+    public LocalDateTime getLastDate() {
+        return date[date.length-1];
+    }
+
     public double[] getOpen() {
         return getValues(KEY_OPEN);
     }
@@ -406,11 +411,25 @@ public class Series {
     }
 
     public void addBar(LocalDateTime ts, double open, double high, double low, double close, double volume) {
-        nextBar(ts, close);
-        getOpen()[lastIndex] = open;
-        getHigh()[lastIndex] = high;
-        getLow()[lastIndex] = low;
-        getVolume()[lastIndex] = volume;
+        if (getClose().length==0 || ts.isAfter(date(0))){
+            nextBar(ts, close);
+            getOpen()[lastIndex] = open;
+            getHigh()[lastIndex] = high;
+            getLow()[lastIndex] = low;
+            getVolume()[lastIndex] = volume;
+        } else {
+            for (int i=0;i<getDate().length;i++) {
+                LocalDateTime seriesDate=getDate()[i];
+                if (seriesDate.isEqual(ts)) {
+                    getOpen()[i] = open;
+                    getHigh()[i] = high;
+                    getLow()[i] = low;
+                    getClose()[i] = close;
+                    getVolume()[i] = volume;
+                }
+            }
+        }
+
     }
 
     public LocalDateTime lastDate() {
@@ -449,7 +468,7 @@ public class Series {
         MInteger outNBElement = new MInteger();
         int len = inValues.length;
         double[] outValues = new double[len];
-        RetCode res = new Core().sma(0, len - 1, inValues, period, outBegIdx, outNBElement, outValues);
+        RetCode res = core.sma(0, len - 1, inValues, period, outBegIdx, outNBElement, outValues);
         if (res == RetCode.Success) {
             return createFullArray(outBegIdx, outNBElement, outValues, 0D);
         } else {
@@ -693,6 +712,10 @@ public class Series {
         } else {
             this.historicalDataLoaded = historicalDataLoaded;
         }
+    }
+
+    public boolean isLastDate(LocalDateTime ts) {
+        return getDate()[lastIndex].isEqual(ts);
     }
 
     class Tick implements Comparable<Tick> {
