@@ -7,6 +7,9 @@
             <pattern>[%d{ddMMMyyyy HH:mm:ss.SSS}][%thread]: %-5level %logger{45} - %msg %n</pattern>
         </encoder>
     </appender>
+    <logger name="com.klein.ta" level="debug" additivity="false">
+        <appender-ref ref="console-debug" />
+    </logger>
     <root level="TRACE">
         <appender-ref ref="console-debug"/>
     </root>
