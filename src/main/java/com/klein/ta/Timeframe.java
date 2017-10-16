@@ -82,4 +82,21 @@ public enum Timeframe {
 		return false;
 	}
 
+	public String getBitfinexCode(){
+		switch (this){
+			case M1:return "1m";
+			case M5: return "5m";
+			case M15:return "15m";
+			case M30:return "30m";
+			case H1:return "h1";
+			case H3:return "h3";
+			case H6:return "h6";
+			case H12:return "h12";
+			case D1:return "d1";
+			case D7:return "d7";
+			case D14:return "d14";
+			case _M1:return "M1";
+			default: throw new RuntimeException("Unexpected timeframe: "+name());
+		}
+	}
 }
