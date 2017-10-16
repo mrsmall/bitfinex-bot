@@ -1,6 +1,6 @@
 package com.klein.ta.funcs;
 
-import com.klein.screener.strategy.Series;
+import com.klein.ta.Series;
 import com.tictactec.ta.lib.MInteger;
 import com.tictactec.ta.lib.RetCode;
 

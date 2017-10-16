@@ -1,6 +1,6 @@
 package com.klein.ta.funcs;
 
-import com.klein.screener.strategy.Series;
+import com.klein.ta.Series;
 
 public class FutureRoc extends AbstractTaFunction {
 

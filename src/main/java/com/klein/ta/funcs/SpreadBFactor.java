@@ -1,7 +1,6 @@
 package com.klein.ta.funcs;
 
-import com.klein.screener.strategy.Series;
-import com.klein.trader.akka.InputVariable;
+import com.klein.ta.Series;
 import org.apache.commons.math3.stat.regression.OLSMultipleLinearRegression;
 import org.joda.time.LocalDateTime;
 

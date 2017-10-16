@@ -1,6 +1,6 @@
 package com.klein.ta.funcs;
 
-import com.klein.screener.strategy.Series;
+import com.klein.ta.Series;
 import org.joda.time.LocalDateTime;
 
 import java.util.Date;

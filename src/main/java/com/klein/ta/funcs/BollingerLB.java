@@ -1,7 +1,6 @@
 package com.klein.ta.funcs;
 
-import com.klein.screener.strategy.Series;
-
+import com.klein.ta.Series;
 import java.util.Arrays;
 
 public class BollingerLB extends AbstractTaFunction {

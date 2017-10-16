@@ -1,8 +1,6 @@
 package com.klein.ta.funcs;
 
-import com.klein.screener.strategy.Series;
-
-import java.util.Arrays;
+import com.klein.ta.Series;
 
 /**
  * Created by mresc on 11.01.16.
