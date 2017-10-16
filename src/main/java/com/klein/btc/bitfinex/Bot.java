@@ -142,17 +142,19 @@ public class Bot extends WebSocketClient {
             double smaTrendLast = smaSlow[smaSlow.length - 1];
             double smaTrendPrev = smaSlow[smaSlow.length - 2];
 
+            boolean smaTrendIsRising=smaTrendLast>smaTrendPrev;
+            LOG.info("SMA trend is rising: {}", smaTrendIsRising);
             boolean smaSlowIsHigherAsTrend=smaSlowLast>smaTrendLast;
             LOG.info("SMA slow is > SMA trend: {}", smaSlowIsHigherAsTrend);
             boolean smaFastIsHigherAsSlow = smaFastLast > smaSlowLast;
             boolean smaFastWasLowOrEqualAsSlow = smaFastPrev<=smaSlowPrev;
             LOG.info("SMA fast is > SMA slow: {}", smaFastIsHigherAsSlow);
             LOG.info("SMA fast was <= SMA slow: {}", smaFastWasLowOrEqualAsSlow);
-            if ( smaFastIsHigherAsSlow && smaFastWasLowOrEqualAsSlow && smaSlowIsHigherAsTrend){
+            if ( smaFastIsHigherAsSlow && smaFastWasLowOrEqualAsSlow && smaSlowIsHigherAsTrend && smaTrendIsRising){
                 LOG.info("Buy {} {}@{}", orderSize, pair, close);
                 balance-=orderSize*close;
                 position+=orderSize;
-            } else if (position>0 && (!smaFastIsHigherAsSlow || !smaSlowIsHigherAsTrend)) {
+            } else if (position>0 && (!smaFastIsHigherAsSlow || !smaSlowIsHigherAsTrend || !smaTrendIsRising)) {
                 LOG.info("Close {} {}@{}", position, pair, close);
                 balance+=position*close;
                 position+=position;
