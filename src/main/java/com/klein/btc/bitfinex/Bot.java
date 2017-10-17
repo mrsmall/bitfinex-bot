@@ -3,7 +3,6 @@ package com.klein.btc.bitfinex;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.klein.ta.PriceType;
 import com.klein.ta.Series;
 import com.klein.ta.Timeframe;
 import org.java_websocket.client.WebSocketClient;
@@ -63,7 +62,7 @@ public class Bot extends WebSocketClient {
     }
 
     public static void main(String[] args){
-        new Bot("BTCUSD", Timeframe.M1, 5, 10, 30, 0.02);
+        new Bot("BTCUSD", Timeframe.M1, 2, 5, 15, 0.01);
     }
 
     @Override
@@ -122,11 +121,12 @@ public class Bot extends WebSocketClient {
      */
     private void processCandle(int channelId, long ts, double open, double high, double low, double close, double volume, boolean history) {
         LocalDateTime date = LocalDateTime.fromDateFields(new Date(ts));
-        LOG.debug("Candle timestamp: {}", date);
+        LOG.trace("Candle timestamp: {}", date);
 
         Series s=getSeries(channelId);
+        boolean newBar=s.isNewBar(date);
         s.addBar(date, open, high,low,close,volume);
-        LOG.debug("Series: {}, lastIndex: {}", s.getSymbol(), s.getLastIndex());
+        LOG.trace("Series: {}, lastIndex: {}", s.getSymbol(), s.getLastIndex());
 
         if (!history && s.isLastDate(date) && s.getClose().length>maxBars){
             double[] smaFast = s.sma(fastSmaPeriod);
@@ -150,16 +150,28 @@ public class Bot extends WebSocketClient {
             boolean smaFastWasLowOrEqualAsSlow = smaFastPrev<=smaSlowPrev;
             LOG.info("SMA fast is > SMA slow: {}", smaFastIsHigherAsSlow);
             LOG.info("SMA fast was <= SMA slow: {}", smaFastWasLowOrEqualAsSlow);
-            if ( smaFastIsHigherAsSlow && smaFastWasLowOrEqualAsSlow && smaSlowIsHigherAsTrend && smaTrendIsRising){
-                LOG.info("Buy {} {}@{}", orderSize, pair, close);
-                balance-=orderSize*close;
-                position+=orderSize;
-            } else if (position>0 && (!smaFastIsHigherAsSlow || !smaSlowIsHigherAsTrend || !smaTrendIsRising)) {
-                LOG.info("Close {} {}@{}", position, pair, close);
-                balance+=position*close;
-                position+=position;
+            if ( smaFastIsHigherAsSlow && smaFastWasLowOrEqualAsSlow && (smaSlowIsHigherAsTrend && smaTrendIsRising)){
+                buy(orderSize, close);
+            } else if (position>0 && (!smaFastIsHigherAsSlow || !(smaSlowIsHigherAsTrend || smaTrendIsRising))) {
+                sell(position, close);
             }
         }
+        if (newBar && !history && position!=0){
+            double equity=balance+(position>0?s.lastClose()*position:-s.lastClose()*position);
+            LOG.info("Equity: {}", equity);
+        }
+    }
+
+    private void sell(double orderSize, double price) {
+        balance+= orderSize * price;
+        position -= orderSize;
+        LOG.info("Sell {} {}@{}, new balance: {}", orderSize, pair, price, balance);
+    }
+
+    private void buy(double orderSize, double price) {
+        balance-=orderSize* price;
+        position+=orderSize;
+        LOG.info("Buy {} {}@{}, new balance: {}", orderSize, pair, price, balance);
     }
 
     private Series getSeries(int channelId) {
