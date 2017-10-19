@@ -18,7 +18,7 @@ import java.net.URI;
 import java.util.*;
 
 public class Bot extends WebSocketClient {
-    private static final Logger LOG= LoggerFactory.getLogger(Bot.class);
+    private static final Logger LOG= LoggerFactory.getLogger("tradelog.3sma");
 
     private ObjectMapper mapper = new ObjectMapper();
     private TypeReference<HashMap<String,Object>> typeRef = new TypeReference<HashMap<String,Object>>() {};
@@ -143,14 +143,14 @@ public class Bot extends WebSocketClient {
             double smaTrendPrev = smaSlow[smaSlow.length - 2];
 
             boolean smaTrendIsRising=smaTrendLast>smaTrendPrev;
-            LOG.info("SMA trend is rising: {}", smaTrendIsRising);
+            LOG.debug("SMA trend is rising: {}", smaTrendIsRising);
             boolean smaSlowIsHigherAsTrend=smaSlowLast>smaTrendLast;
-            LOG.info("SMA slow is > SMA trend: {}", smaSlowIsHigherAsTrend);
+            LOG.debug("SMA slow is > SMA trend: {}", smaSlowIsHigherAsTrend);
             boolean smaFastIsHigherAsSlow = smaFastLast > smaSlowLast;
             boolean smaFastWasLowOrEqualAsSlow = smaFastPrev<=smaSlowPrev;
-            LOG.info("SMA fast is > SMA slow: {}", smaFastIsHigherAsSlow);
-            LOG.info("SMA fast was <= SMA slow: {}", smaFastWasLowOrEqualAsSlow);
-            if ( smaFastIsHigherAsSlow && smaFastWasLowOrEqualAsSlow && (smaSlowIsHigherAsTrend && smaTrendIsRising)){
+            LOG.debug("SMA fast is > SMA slow: {}", smaFastIsHigherAsSlow);
+            LOG.debug("SMA fast was <= SMA slow: {}", smaFastWasLowOrEqualAsSlow);
+            if (position==0 &&  smaFastIsHigherAsSlow && smaFastWasLowOrEqualAsSlow && (smaSlowIsHigherAsTrend && smaTrendIsRising)){
                 buy(orderSize, close);
             } else if (position>0 && (!smaFastIsHigherAsSlow || !(smaSlowIsHigherAsTrend || smaTrendIsRising))) {
                 sell(position, close);

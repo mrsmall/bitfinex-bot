@@ -4,11 +4,21 @@
 
     <appender name="console-debug" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>[%d{ddMMMyyyy HH:mm:ss.SSS}][%thread]: %-5level %logger{45} - %msg %n</pattern>
+            <pattern>[%d{dd.MM.yy HH:mm:ss.SSS}][%thread]: %-5level %logger{45} - %msg %n</pattern>
+        </encoder>
+    </appender>
+    <appender name="trade-log" class="ch.qos.logback.core.FileAppender">
+        <file>trade.log</file>
+        <append>true</append>
+        <encoder>
+            <pattern>[%d{dd.MM.yy HH:mm:ss.SSS}]: %-5level %logger{45} - %msg %n</pattern>
         </encoder>
     </appender>
     <logger name="com.klein.ta" level="debug" additivity="false">
         <appender-ref ref="console-debug" />
+    </logger>
+    <logger name="tradelog" level="info" additivity="false">
+        <appender-ref ref="trade-log" />
     </logger>
     <root level="TRACE">
         <appender-ref ref="console-debug"/>
