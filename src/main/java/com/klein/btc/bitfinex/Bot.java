@@ -147,13 +147,29 @@ public class Bot extends WebSocketClient {
             boolean smaSlowIsHigherAsTrend=smaSlowLast>smaTrendLast;
             LOG.debug("SMA slow is > SMA trend: {}", smaSlowIsHigherAsTrend);
             boolean smaFastIsHigherAsSlow = smaFastLast > smaSlowLast;
-            boolean smaFastWasLowOrEqualAsSlow = smaFastPrev<=smaSlowPrev;
+            boolean smaFastWasLowerOrEqualAsSlow = smaFastPrev<=smaSlowPrev;
             LOG.debug("SMA fast is > SMA slow: {}", smaFastIsHigherAsSlow);
-            LOG.debug("SMA fast was <= SMA slow: {}", smaFastWasLowOrEqualAsSlow);
-            if (position==0 &&  smaFastIsHigherAsSlow && smaFastWasLowOrEqualAsSlow && (smaSlowIsHigherAsTrend && smaTrendIsRising)){
+            LOG.debug("SMA fast was <= SMA slow: {}", smaFastWasLowerOrEqualAsSlow);
+            LOG.info("LONG entry: SMA fast was <= SMA slow: {}  SMA slow is > SMA trend: {} SMA fast is > SMA slow: {}  SMA fast was <= SMA slow: {}", smaFastWasLowerOrEqualAsSlow ?"X":"-", smaSlowIsHigherAsTrend?"X":"-", smaFastIsHigherAsSlow?"X":"-", smaFastWasLowerOrEqualAsSlow ?"X":"-");
+            if (position==0 &&  smaFastIsHigherAsSlow && smaFastWasLowerOrEqualAsSlow && (smaSlowIsHigherAsTrend && smaTrendIsRising)){
                 buy(orderSize, close);
             } else if (position>0 && (!smaFastIsHigherAsSlow || !(smaSlowIsHigherAsTrend || smaTrendIsRising))) {
                 sell(position, close);
+            }
+
+            boolean smaTrendIsFalling=smaTrendLast<smaTrendPrev;
+            LOG.debug("SMA trend is falling: {}", smaTrendIsFalling);
+            boolean smaSlowIsLowerAsTrend=smaSlowLast<smaTrendLast;
+            LOG.debug("SMA slow is < SMA trend: {}", smaSlowIsLowerAsTrend);
+            boolean smaFastIsLowerAsSlow = smaFastLast < smaSlowLast;
+            boolean smaFastWasHigherOrEqualAsSlow = smaFastPrev>=smaSlowPrev;
+            LOG.debug("SMA fast is < SMA slow: {}", smaFastIsLowerAsSlow);
+            LOG.debug("SMA fast was >= SMA slow: {}", smaFastWasHigherOrEqualAsSlow);
+            LOG.info("SHORT entry: SMA fast was <= SMA slow: {}  SMA slow is > SMA trend: {} SMA fast is > SMA slow: {}  SMA fast was <= SMA slow: {}", smaFastWasLowerOrEqualAsSlow ?"X":"-", smaSlowIsHigherAsTrend?"X":"-", smaFastIsHigherAsSlow?"X":"-", smaFastWasLowerOrEqualAsSlow ?"X":"-");
+            if (position==0 &&  smaFastIsLowerAsSlow && smaFastWasHigherOrEqualAsSlow && (smaSlowIsLowerAsTrend && smaTrendIsFalling)){
+                sell(orderSize, close);
+            } else if (position<0 && (!smaFastIsLowerAsSlow || !(smaSlowIsLowerAsTrend || smaTrendIsFalling))) {
+                buy(position, close);
             }
         }
         if (newBar && !history && position!=0){
