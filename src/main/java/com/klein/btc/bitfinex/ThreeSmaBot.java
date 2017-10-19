@@ -28,18 +28,21 @@ public class ThreeSmaBot implements WebSocketListener {
     private int fastSmaPeriod=10;
     private int slowSmaPeriod=30;
     private int trendSmaPeriod=60;
-    private double balance=942.736;
+    private double balance=1000;
     private double orderSize=0.01;
-    private double position=0.01;
+    private double position=0.0;
+    private double openPrice=0.0;
     private CustomWebsocketClient websocketClient;
+    private double orderCommission=0.004;
 
-    public ThreeSmaBot(String pair, Timeframe timeframe, int fastSmaPeriod, int slowSmaPeriod, int trendSmaPeriod, double orderSize) {
+    public ThreeSmaBot(String pair, Timeframe timeframe, int fastSmaPeriod, int slowSmaPeriod, int trendSmaPeriod, double orderSize, double orderCommission) {
         this.pair=pair;
         this.timeframe = timeframe;
         this.fastSmaPeriod=fastSmaPeriod;
         this.slowSmaPeriod=slowSmaPeriod;
         this.trendSmaPeriod=trendSmaPeriod;
         this.orderSize=orderSize;
+        this.orderCommission = orderCommission;
         maxBars=Math.max(fastSmaPeriod, slowSmaPeriod);
         maxBars=Math.max(slowSmaPeriod, trendSmaPeriod);
 
@@ -54,7 +57,7 @@ public class ThreeSmaBot implements WebSocketListener {
 
 
     public static void main(String[] args){
-        new ThreeSmaBot("BTCUSD", Timeframe.M1, 2, 5, 15, 0.01);
+        new ThreeSmaBot("BTCUSD", Timeframe.M1, 2, 5, 15, 0.01, 0.004);
     }
 
     @Override
@@ -178,27 +181,52 @@ public class ThreeSmaBot implements WebSocketListener {
                     LOG.debug("Open short position: {} {}, checking exists...", position, pair);
 
                     if (!smaFastIsLowerAsSlow || !(smaSlowIsLowerAsTrend || smaTrendIsFalling)) {
-                        buy(position, close);
+                        buy(-position, close);
                     }
                 }
             }
         }
         if (newBar && !history && position!=0){
-            double equity=balance+(position>0?s.lastClose()*position:-s.lastClose()*position);
-            LOG.info("Equity: {}", equity);
+            double equity=balance;
+            if (position>0)
+                equity += s.lastClose() * position;
+            else {
+                equity += s.lastClose() * (-position);
+            }
+            LOG.info("Equity: {}, position: {}", equity, position);
         }
     }
 
     private void sell(double orderSize, double price) {
-        balance+= orderSize * price;
+        if (position==0){
+            openPrice=price;
+            balance-= orderSize * price;
+            balance-=(orderSize* price)*orderCommission;
+        } else if (position<0) {
+            openPrice = (openPrice * (-position) + orderSize * price) / (-position + orderSize);
+            balance -= orderSize * price;
+            balance-=(orderSize* price)*orderCommission;
+        } else {
+            balance+= orderSize * price;
+        }
         position -= orderSize;
-        LOG.info("Sell {} {}@{}, new balance: {}", orderSize, pair, price, balance);
+        LOG.info("Sell {} {}@{}, new position: {}, new balance: {}", orderSize, pair, price, position, balance);
     }
 
     private void buy(double orderSize, double price) {
-        balance-=orderSize* price;
+        if (position==0){
+            openPrice=price;
+            balance-=orderSize* price;
+            balance-=(orderSize* price)*orderCommission;
+        } else if (position>0){
+            openPrice=(openPrice*position+orderSize*price)/(position+orderSize);
+            balance-=orderSize* price;
+            balance-=(orderSize* price)*orderCommission;
+        } else {
+            balance+=orderSize* price;
+        }
         position+=orderSize;
-        LOG.info("Buy {} {}@{}, new balance: {}", orderSize, pair, price, balance);
+        LOG.info("Buy {} {}@{}, new position: {}, new balance: {}", orderSize, pair, price, position, balance);
     }
 
     private Series getSeries(int channelId) {
