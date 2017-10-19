@@ -13,12 +13,16 @@
         <encoder>
             <pattern>[%d{dd.MM.yy HH:mm:ss.SSS}]: %-5level %logger{45} - %msg %n</pattern>
         </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
     </appender>
     <logger name="com.klein.ta" level="debug" additivity="false">
         <appender-ref ref="console-debug" />
     </logger>
-    <logger name="tradelog" level="info" additivity="false">
+    <logger name="tradelog" level="trace" additivity="false">
         <appender-ref ref="trade-log" />
+        <appender-ref ref="console-debug"/>
     </logger>
     <root level="TRACE">
         <appender-ref ref="console-debug"/>
