@@ -5,19 +5,17 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.klein.ta.Series;
 import com.klein.ta.Timeframe;
-import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.drafts.Draft_6455;
+import com.klein.websocket.CustomWebsocketClient;
+import com.klein.websocket.WebSocketListener;
 import org.java_websocket.handshake.ServerHandshake;
 import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
-import java.net.URI;
 import java.util.*;
 
-public class Bot extends WebSocketClient {
+public class ThreeSmaBot implements WebSocketListener {
     private static final Logger LOG= LoggerFactory.getLogger("tradelog.3sma");
 
     private ObjectMapper mapper = new ObjectMapper();
@@ -30,27 +28,12 @@ public class Bot extends WebSocketClient {
     private int fastSmaPeriod=10;
     private int slowSmaPeriod=30;
     private int trendSmaPeriod=60;
-    private double balance=1000;
-    private double orderSize=1000;
-    private double position=0;
+    private double balance=942.736;
+    private double orderSize=0.01;
+    private double position=0.01;
+    private CustomWebsocketClient websocketClient;
 
-
-    private Bot(URI serverUri, Map<String,String> httpHeaders) {
-        super(serverUri, new Draft_6455(), httpHeaders, 60000);
-        try {
-            setSocket(SSLSocketFactory.getDefault().createSocket(serverUri.getHost(), serverUri.getPort()));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        try {
-            connectBlocking();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public Bot(String pair, Timeframe timeframe, int fastSmaPeriod, int slowSmaPeriod, int trendSmaPeriod, double orderSize) {
-        this(URI.create("wss://api.bitfinex.com:443/ws/2"), new HashMap<>());
+    public ThreeSmaBot(String pair, Timeframe timeframe, int fastSmaPeriod, int slowSmaPeriod, int trendSmaPeriod, double orderSize) {
         this.pair=pair;
         this.timeframe = timeframe;
         this.fastSmaPeriod=fastSmaPeriod;
@@ -59,10 +42,19 @@ public class Bot extends WebSocketClient {
         this.orderSize=orderSize;
         maxBars=Math.max(fastSmaPeriod, slowSmaPeriod);
         maxBars=Math.max(slowSmaPeriod, trendSmaPeriod);
+
+        connectToExchange();
     }
 
+
+    private void connectToExchange() {
+        subscriptions.clear();
+        websocketClient = new CustomWebsocketClient("wss://api.bitfinex.com:443/ws/2", this);
+    }
+
+
     public static void main(String[] args){
-        new Bot("BTCUSD", Timeframe.M1, 2, 5, 15, 0.01);
+        new ThreeSmaBot("BTCUSD", Timeframe.M1, 2, 5, 15, 0.01);
     }
 
     @Override
@@ -143,33 +135,52 @@ public class Bot extends WebSocketClient {
             double smaTrendPrev = smaSlow[smaSlow.length - 2];
 
             boolean smaTrendIsRising=smaTrendLast>smaTrendPrev;
-            LOG.debug("SMA trend is rising: {}", smaTrendIsRising);
-            boolean smaSlowIsHigherAsTrend=smaSlowLast>smaTrendLast;
-            LOG.debug("SMA slow is > SMA trend: {}", smaSlowIsHigherAsTrend);
-            boolean smaFastIsHigherAsSlow = smaFastLast > smaSlowLast;
-            boolean smaFastWasLowerOrEqualAsSlow = smaFastPrev<=smaSlowPrev;
-            LOG.debug("SMA fast is > SMA slow: {}", smaFastIsHigherAsSlow);
-            LOG.debug("SMA fast was <= SMA slow: {}", smaFastWasLowerOrEqualAsSlow);
-            LOG.info("LONG entry: SMA fast was <= SMA slow: {}  SMA slow is > SMA trend: {} SMA fast is > SMA slow: {}  SMA fast was <= SMA slow: {}", smaFastWasLowerOrEqualAsSlow ?"X":"-", smaSlowIsHigherAsTrend?"X":"-", smaFastIsHigherAsSlow?"X":"-", smaFastWasLowerOrEqualAsSlow ?"X":"-");
-            if (position==0 &&  smaFastIsHigherAsSlow && smaFastWasLowerOrEqualAsSlow && (smaSlowIsHigherAsTrend && smaTrendIsRising)){
-                buy(orderSize, close);
-            } else if (position>0 && (!smaFastIsHigherAsSlow || !(smaSlowIsHigherAsTrend || smaTrendIsRising))) {
-                sell(position, close);
-            }
-
+            LOG.trace("SMA trend is rising: {}", smaTrendIsRising);
             boolean smaTrendIsFalling=smaTrendLast<smaTrendPrev;
-            LOG.debug("SMA trend is falling: {}", smaTrendIsFalling);
+            LOG.trace("SMA trend is falling: {}", smaTrendIsFalling);
+            boolean smaSlowIsHigherAsTrend=smaSlowLast>smaTrendLast;
+            LOG.trace("SMA slow is > SMA trend: {}", smaSlowIsHigherAsTrend);
+            boolean smaFastIsHigherAsSlow = smaFastLast > smaSlowLast;
+            LOG.trace("SMA fast is > SMA slow: {}", smaFastIsHigherAsSlow);
+            boolean smaFastWasLowerOrEqualAsSlow = smaFastPrev<=smaSlowPrev;
+            LOG.trace("SMA fast was <= SMA slow: {}", smaFastWasLowerOrEqualAsSlow);
             boolean smaSlowIsLowerAsTrend=smaSlowLast<smaTrendLast;
-            LOG.debug("SMA slow is < SMA trend: {}", smaSlowIsLowerAsTrend);
+            LOG.trace("SMA slow is < SMA trend: {}", smaSlowIsLowerAsTrend);
             boolean smaFastIsLowerAsSlow = smaFastLast < smaSlowLast;
+            LOG.trace("SMA fast is < SMA slow: {}", smaFastIsLowerAsSlow);
             boolean smaFastWasHigherOrEqualAsSlow = smaFastPrev>=smaSlowPrev;
-            LOG.debug("SMA fast is < SMA slow: {}", smaFastIsLowerAsSlow);
-            LOG.debug("SMA fast was >= SMA slow: {}", smaFastWasHigherOrEqualAsSlow);
-            LOG.info("SHORT entry: SMA fast was <= SMA slow: {}  SMA slow is > SMA trend: {} SMA fast is > SMA slow: {}  SMA fast was <= SMA slow: {}", smaFastWasLowerOrEqualAsSlow ?"X":"-", smaSlowIsHigherAsTrend?"X":"-", smaFastIsHigherAsSlow?"X":"-", smaFastWasLowerOrEqualAsSlow ?"X":"-");
-            if (position==0 &&  smaFastIsLowerAsSlow && smaFastWasHigherOrEqualAsSlow && (smaSlowIsLowerAsTrend && smaTrendIsFalling)){
-                sell(orderSize, close);
-            } else if (position<0 && (!smaFastIsLowerAsSlow || !(smaSlowIsLowerAsTrend || smaTrendIsFalling))) {
-                buy(position, close);
+            LOG.trace("SMA fast was >= SMA slow: {}", smaFastWasHigherOrEqualAsSlow);
+
+            if (position==0){
+                LOG.debug("No open positions, checking entries on {}...", pair);
+
+                if (smaTrendIsRising || smaSlowIsHigherAsTrend){
+                    LOG.debug("Trendline rising or slow SMA is over trend line, checking LONG entry");
+
+                    if (smaFastIsHigherAsSlow && smaFastWasLowerOrEqualAsSlow){
+                        buy(orderSize, close);
+                    }
+                } else if (smaTrendIsFalling || smaSlowIsLowerAsTrend){
+                    LOG.debug("Trendline falling or slow SMA is under the trend line, checking SHORT entry");
+
+                    if (smaFastIsLowerAsSlow && smaFastWasHigherOrEqualAsSlow){
+                        sell(orderSize, close);
+                    }
+                }
+            } else {
+                if (position>0){
+                    LOG.debug("Open long position: {} {}, checking exists...", position, pair);
+
+                    if (!smaFastIsHigherAsSlow || !(smaSlowIsHigherAsTrend || smaTrendIsRising)) {
+                        sell(position, close);
+                    }
+                } else {
+                    LOG.debug("Open short position: {} {}, checking exists...", position, pair);
+
+                    if (!smaFastIsLowerAsSlow || !(smaSlowIsLowerAsTrend || smaTrendIsFalling)) {
+                        buy(position, close);
+                    }
+                }
             }
         }
         if (newBar && !history && position!=0){
@@ -206,7 +217,8 @@ public class Bot extends WebSocketClient {
             if (event.get("key").equals("trade:"+timeframe.getBitfinexCode()+":t"+pair)){
                 int channelId = (int) event.get("chanId");
                 subscriptions.add(channelId);
-                series.put(channelId, new Series(pair, timeframe, maxBars+10));
+                if (!series.containsKey(channelId))
+                    series.put(channelId, new Series(pair, timeframe, maxBars+10));
             }
         }
     }
@@ -223,7 +235,7 @@ public class Bot extends WebSocketClient {
         try {
             String message=mapper.writeValueAsString(msg);
             LOG.trace("Sending: {}", message);
-            send(message);
+            websocketClient.send(message);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -232,6 +244,9 @@ public class Bot extends WebSocketClient {
     @Override
     public void onClose(int code, String reason, boolean remote) {
         LOG.trace("onClose, code: {}, reason: {}, remote: {}", code, reason, remote);
+        if (remote==true) {
+            connectToExchange();
+        }
     }
 
     @Override
