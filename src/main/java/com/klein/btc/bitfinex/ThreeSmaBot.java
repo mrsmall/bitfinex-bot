@@ -11,6 +11,7 @@ import org.java_websocket.handshake.ServerHandshake;
 import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import java.io.IOException;
 import java.util.*;
@@ -57,7 +58,8 @@ public class ThreeSmaBot implements WebSocketListener {
 
 
     public static void main(String[] args){
-        new ThreeSmaBot("BTCUSD", Timeframe.M1, 2, 5, 15, 0.01, 0.004);
+        new ThreeSmaBot("BTCUSD", Timeframe.M5, 5, 15, 60, 0.01, 0.004);
+//        new ThreeSmaBot("XMRUSD", Timeframe.M1, 2, 5, 15, 0.5, 0.004);
     }
 
     @Override
@@ -124,18 +126,86 @@ public class ThreeSmaBot implements WebSocketListener {
         LOG.trace("Series: {}, lastIndex: {}", s.getSymbol(), s.getLastIndex());
 
         if (!history && s.isLastDate(date) && s.getClose().length>maxBars){
+            onNewPrice(s);
+        }
+        if (newBar && !history){
+            if (position!=0){
+                double equity=balance;
+                if (position>0)
+                    equity += s.lastClose() * position;
+                else {
+                    equity += s.lastClose() * (-position);
+                }
+                LOG.info("Equity: {}, position: {}", equity, position);
+            }
+            onNewBar(s);
+        }
+    }
+
+    private void onNewPrice(Series s) {
+        if (position==0)
+            return;
+        double[] smaFast = s.sma(fastSmaPeriod);
+        double[] smaSlow = s.sma(slowSmaPeriod);
+        double[] smaTrend= s.sma(trendSmaPeriod);
+
+//            LOG.trace("SMA trend values: {}", Arrays.toString(smaTrend));
+
+        double smaFastLast = smaFast[smaFast.length - 1];
+        double smaSlowLast = smaSlow[smaSlow.length - 1];
+        double smaFastPrev = smaFast[smaFast.length - 2];
+        double smaSlowPrev = smaSlow[smaSlow.length - 2];
+        double smaTrendLast = smaSlow[smaSlow.length - 1];
+        double smaTrendPrev = smaSlow[smaSlow.length - 2];
+
+        boolean smaTrendIsRising=smaTrendLast>smaTrendPrev;
+        LOG.trace("SMA trend is rising: {}", smaTrendIsRising);
+        boolean smaTrendIsFalling=smaTrendLast<smaTrendPrev;
+        LOG.trace("SMA trend is falling: {}", smaTrendIsFalling);
+        boolean smaSlowIsHigherAsTrend=smaSlowLast>smaTrendLast;
+        LOG.trace("SMA slow is > SMA trend: {}", smaSlowIsHigherAsTrend);
+        boolean smaFastIsHigherAsSlow = smaFastLast > smaSlowLast;
+        LOG.trace("SMA fast is > SMA slow: {}", smaFastIsHigherAsSlow);
+        boolean smaFastWasLowerOrEqualAsSlow = smaFastPrev<=smaSlowPrev;
+        LOG.trace("SMA fast was <= SMA slow: {}", smaFastWasLowerOrEqualAsSlow);
+        boolean smaSlowIsLowerAsTrend=smaSlowLast<smaTrendLast;
+        LOG.trace("SMA slow is < SMA trend: {}", smaSlowIsLowerAsTrend);
+        boolean smaFastIsLowerAsSlow = smaFastLast < smaSlowLast;
+        LOG.trace("SMA fast is < SMA slow: {}", smaFastIsLowerAsSlow);
+        boolean smaFastWasHigherOrEqualAsSlow = smaFastPrev>=smaSlowPrev;
+        LOG.trace("SMA fast was >= SMA slow: {}", smaFastWasHigherOrEqualAsSlow);
+
+        double close=s.lastClose();
+
+        if (position>0){
+            LOG.debug("Open long position: {} {}, checking exists...", position, pair);
+
+            if (!smaFastIsHigherAsSlow || !(smaSlowIsHigherAsTrend || smaTrendIsRising)) {
+                sell(position, close);
+            }
+        } else {
+            LOG.debug("Open short position: {} {}, checking exists...", position, pair);
+
+            if (!smaFastIsLowerAsSlow || !(smaSlowIsLowerAsTrend || smaTrendIsFalling)) {
+                buy(-position, close);
+            }
+        }
+    }
+
+    public void onNewBar(Series s){
+        if (position==0){
             double[] smaFast = s.sma(fastSmaPeriod);
             double[] smaSlow = s.sma(slowSmaPeriod);
             double[] smaTrend= s.sma(trendSmaPeriod);
 
 //            LOG.trace("SMA trend values: {}", Arrays.toString(smaTrend));
 
-            double smaFastLast = smaFast[smaFast.length - 1];
-            double smaSlowLast = smaSlow[smaSlow.length - 1];
-            double smaFastPrev = smaFast[smaFast.length - 2];
-            double smaSlowPrev = smaSlow[smaSlow.length - 2];
-            double smaTrendLast = smaSlow[smaSlow.length - 1];
-            double smaTrendPrev = smaSlow[smaSlow.length - 2];
+            double smaFastLast = smaFast[smaFast.length - 2];
+            double smaSlowLast = smaSlow[smaSlow.length - 2];
+            double smaFastPrev = smaFast[smaFast.length - 3];
+            double smaSlowPrev = smaSlow[smaSlow.length - 3];
+            double smaTrendLast = smaSlow[smaSlow.length - 2];
+            double smaTrendPrev = smaSlow[smaSlow.length - 3];
 
             boolean smaTrendIsRising=smaTrendLast>smaTrendPrev;
             LOG.trace("SMA trend is rising: {}", smaTrendIsRising);
@@ -154,46 +224,23 @@ public class ThreeSmaBot implements WebSocketListener {
             boolean smaFastWasHigherOrEqualAsSlow = smaFastPrev>=smaSlowPrev;
             LOG.trace("SMA fast was >= SMA slow: {}", smaFastWasHigherOrEqualAsSlow);
 
-            if (position==0){
-                LOG.debug("No open positions, checking entries on {}...", pair);
+            LOG.debug("No open positions, checking entries on {}...", pair);
 
-                if (smaTrendIsRising || smaSlowIsHigherAsTrend){
-                    LOG.debug("Trendline rising or slow SMA is over trend line, checking LONG entry");
+            double close=s.lastClose();
 
-                    if (smaFastIsHigherAsSlow && smaFastWasLowerOrEqualAsSlow){
-                        buy(orderSize, close);
-                    }
-                } else if (smaTrendIsFalling || smaSlowIsLowerAsTrend){
-                    LOG.debug("Trendline falling or slow SMA is under the trend line, checking SHORT entry");
+            if (smaTrendIsRising || smaSlowIsHigherAsTrend){
+                LOG.debug("Trendline rising or slow SMA is over trend line, checking LONG entry");
 
-                    if (smaFastIsLowerAsSlow && smaFastWasHigherOrEqualAsSlow){
-                        sell(orderSize, close);
-                    }
+                if (smaFastIsHigherAsSlow && smaFastWasLowerOrEqualAsSlow){
+                    buy(orderSize, close);
                 }
-            } else {
-                if (position>0){
-                    LOG.debug("Open long position: {} {}, checking exists...", position, pair);
+            } else if (smaTrendIsFalling || smaSlowIsLowerAsTrend){
+                LOG.debug("Trendline falling or slow SMA is under the trend line, checking SHORT entry");
 
-                    if (!smaFastIsHigherAsSlow || !(smaSlowIsHigherAsTrend || smaTrendIsRising)) {
-                        sell(position, close);
-                    }
-                } else {
-                    LOG.debug("Open short position: {} {}, checking exists...", position, pair);
-
-                    if (!smaFastIsLowerAsSlow || !(smaSlowIsLowerAsTrend || smaTrendIsFalling)) {
-                        buy(-position, close);
-                    }
+                if (smaFastIsLowerAsSlow && smaFastWasHigherOrEqualAsSlow){
+                    sell(orderSize, close);
                 }
             }
-        }
-        if (newBar && !history && position!=0){
-            double equity=balance;
-            if (position>0)
-                equity += s.lastClose() * position;
-            else {
-                equity += s.lastClose() * (-position);
-            }
-            LOG.info("Equity: {}, position: {}", equity, position);
         }
     }
 
