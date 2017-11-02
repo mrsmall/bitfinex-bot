@@ -26,11 +26,7 @@ public class CustomWebsocketClient extends WebSocketClient {
             e.printStackTrace();
         }
 
-        try {
-            connectBlocking();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+        connect();
     }
 
 
