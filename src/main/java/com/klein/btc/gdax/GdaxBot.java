@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.klein.btc.Exchange;
 import com.klein.btc.OrderBook;
+import com.klein.btc.OrderBookListener;
 import com.klein.btc.Product;
 import com.klein.ta.Series;
 import com.klein.ta.Timeframe;
@@ -29,14 +30,16 @@ public class GdaxBot implements WebSocketListener {
     private Timeframe timeframe;
     private Map<Integer, Series> series=new HashMap<>();
     private double balance=1000;
+    private OrderBookListener orderBookListener;
     private double orderSize=0.01;
     private double position=0.0;
     private double openPrice=0.0;
     private CustomWebsocketClient websocketClient;
     private double orderCommission=0.004;
 
-    public GdaxBot(Product product, Timeframe timeframe, double orderSize, double orderCommission) {
+    public GdaxBot(Product product, OrderBookListener orderBookListener, double orderSize, double orderCommission) {
         this.pair=product;
+        this.orderBookListener = orderBookListener;
         this.orderSize=orderSize;
         this.orderCommission = orderCommission;
         connectToExchange();
@@ -50,7 +53,7 @@ public class GdaxBot implements WebSocketListener {
 
 
     public static void main(String[] args){
-        new GdaxBot(Product.BTCUSD, Timeframe.M5, 0.01, 0.004);
+        new GdaxBot(Product.BTCUSD, null, 0.01, 0.004);
     }
 
     @Override
@@ -75,7 +78,7 @@ public class GdaxBot implements WebSocketListener {
     public OrderBook getOrderBook(Product product){
         OrderBook orderBook = orderBooks.get(product);
         if (orderBook==null) {
-            orderBook=new OrderBook(Exchange.GDAX, product);
+            orderBook=new OrderBook(Exchange.GDAX, product, orderBookListener);
             this.orderBooks.put(product, orderBook);
         }
         return orderBook;

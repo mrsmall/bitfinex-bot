@@ -35,8 +35,9 @@ public class BitfinexBot implements WebSocketListener {
     private Map<Product, OrderBook> orderBooks=new HashMap<>();
     private OrderBookListener orderBookListener;
 
-    public BitfinexBot(Product pair, double orderSize, double orderCommission) {
+    public BitfinexBot(Product pair, OrderBookListener orderBookListener, double orderSize, double orderCommission) {
         this.pair=pair;
+        this.orderBookListener = orderBookListener;
         this.orderSize=orderSize;
         this.orderCommission = orderCommission;
 
@@ -51,7 +52,7 @@ public class BitfinexBot implements WebSocketListener {
 
 
     public static void main(String[] args){
-        new BitfinexBot(Product.BTCUSD, 0.01, 0.004);
+        new BitfinexBot(Product.BTCUSD, null, 0.01, 0.004);
     }
 
     @Override
@@ -199,7 +200,7 @@ public class BitfinexBot implements WebSocketListener {
     public OrderBook getOrderBook(Product product){
         OrderBook orderBook = orderBooks.get(product);
         if (orderBook==null) {
-            orderBook=new OrderBook(Exchange.BITFINEX, product);
+            orderBook=new OrderBook(Exchange.BITFINEX, product, orderBookListener);
             this.orderBooks.put(product, orderBook);
         }
         return orderBook;

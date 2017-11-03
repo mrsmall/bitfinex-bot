@@ -15,21 +15,20 @@ public class OrderBook {
     private float maxBid=0;
     private float maxAsk=0;
 
-
     private OrderBookListener orderBookListener;
 
-    public OrderBook(Exchange exchange, Product product, int maxEntries) {
+    public OrderBook(Exchange exchange, Product product, int maxEntries, OrderBookListener orderBookListener) {
         this.exchange = exchange;
         this.product = product;
         this.maxEntries = maxEntries;
+        this.orderBookListener = orderBookListener;
 
         ask=new TreeMap<>();
         bid=new TreeMap<>();
-
     }
 
-    public OrderBook(Exchange exchange, Product product) {
-        this(exchange, product, 10);
+    public OrderBook(Exchange exchange, Product product, OrderBookListener orderBookListener) {
+        this(exchange, product, 10, orderBookListener);
     }
 
     public void setOrderBookListener(OrderBookListener orderBookListener) {
@@ -132,6 +131,14 @@ public class OrderBook {
 //        echo("\n");
 //        echo("\n");
 //        echo("\n");
+    }
+
+    public float getBestAsk(){
+        return minAsk;
+    }
+
+    public float getBestBid(){
+        return maxBid;
     }
 
     private void echo(float v) {
