@@ -143,7 +143,7 @@ public class GdaxBot implements WebSocketListener {
                 orderBook.addAsk(price, size);
             }
 
-            orderBook.dump();
+//            orderBook.dump();
         } else if (eventType.equals("l2update")){
             String productId = (String) event.get("product_id");
             Product product=Product.getProductForGdaxCode(productId);
@@ -168,7 +168,7 @@ public class GdaxBot implements WebSocketListener {
                     }
                 }
             }
-            orderBook.dump();
+//            orderBook.dump();
         } else if (eventType.equals("subscriptions")){
             List<Map> channels= (List) event.get("channels");
             for (Map channel : channels) {

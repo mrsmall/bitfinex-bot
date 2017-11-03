@@ -105,7 +105,7 @@ public class BitfinexBot implements WebSocketListener {
                             }
                         }
                     }
-                    orderBook.dump();
+//                    orderBook.dump();
                 }
             }
         } else {
