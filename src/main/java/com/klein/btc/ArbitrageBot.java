@@ -22,6 +22,56 @@ public class ArbitrageBot implements OrderBookListener {
     private TelegramLongPollingBot bot;
 
     public ArbitrageBot() {
+        Properties props=new Properties();
+        FileInputStream fis= null;
+        try {
+            fis = new FileInputStream("api_key.properties");
+            props.load(fis);
+            fis.close();
+
+            bot = new TelegramLongPollingBot(){
+
+                @Override
+                public void onUpdateReceived(Update update) {
+                    LOG.debug("Telegram update from user: {}:{}", update.getMessage().getFrom().getId(), update.getMessage().getFrom().getUserName());
+                }
+
+                @Override
+                public void onUpdatesReceived(List<Update> updates) {
+                    LOG.debug("Telegram updates: {}", updates.size());
+                    for (Update update : updates) {
+                        LOG.debug("Telegram update from user: {}:{}", update.getMessage().getFrom().getId(), update.getMessage().getFrom().getUserName());
+                    }
+                }
+
+
+                @Override
+                public String getBotUsername() {
+                    return null;
+                }
+
+                @Override
+                public String getBotToken() {
+                    return props.getProperty("TELEGRAM_API");
+                }
+
+                @Override
+                public void onClosing() {
+                    LOG.info("Closing telegram bot");
+                }
+            };
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            TimeUnit.SECONDS.sleep(10);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.exit(0);
         BitfinexBot bitfinex = new BitfinexBot(product, this, 0.01, 0.004);
         GdaxBot gdax = new GdaxBot(product, this, 0.01, 0.004);
     }
