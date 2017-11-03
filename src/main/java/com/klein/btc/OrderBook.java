@@ -22,6 +22,8 @@ public class OrderBook {
         this.product = product;
         this.maxEntries = maxEntries;
         this.orderBookListener = orderBookListener;
+        if (orderBookListener!=null)
+            orderBookListener.onInit(this);
 
         ask=new TreeMap<>();
         bid=new TreeMap<>();
@@ -29,10 +31,6 @@ public class OrderBook {
 
     public OrderBook(Exchange exchange, Product product, OrderBookListener orderBookListener) {
         this(exchange, product, 10, orderBookListener);
-    }
-
-    public void setOrderBookListener(OrderBookListener orderBookListener) {
-        this.orderBookListener = orderBookListener;
     }
 
     public Product getProduct() {
@@ -49,6 +47,9 @@ public class OrderBook {
 
     public void addAsk(float price, float size) {
         ask.put(price, size);
+        if (orderBookListener!=null)
+            orderBookListener.onAskChanged(this, price, size);
+
 //        System.out.println("Added ASK: "+price);
 
         if (ask.size()>maxEntries){
@@ -68,6 +69,9 @@ public class OrderBook {
 
     public void addBid(float price, float size) {
         bid.put(price, size);
+        if (orderBookListener!=null)
+            orderBookListener.onBidChanged(this, price, size);
+
 //        System.out.println("Added BID: "+price);
 
         if (bid.size()>maxEntries){
@@ -147,5 +151,9 @@ public class OrderBook {
 
     private void echo(String s) {
         System.out.print(s);
+    }
+
+    public Exchange getExchange() {
+        return exchange;
     }
 }
