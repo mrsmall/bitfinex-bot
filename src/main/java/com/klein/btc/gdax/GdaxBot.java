@@ -3,6 +3,7 @@ package com.klein.btc.gdax;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.klein.btc.OrderBook;
 import com.klein.btc.Product;
 import com.klein.ta.Series;
 import com.klein.ta.Timeframe;

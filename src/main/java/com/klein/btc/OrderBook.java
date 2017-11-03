@@ -1,4 +1,4 @@
-package com.klein.btc.gdax;
+package com.klein.btc;
 
 import com.klein.btc.Product;
 
