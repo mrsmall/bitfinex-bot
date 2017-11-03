@@ -3,6 +3,7 @@ package com.klein.btc.gdax;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.klein.btc.Exchange;
 import com.klein.btc.OrderBook;
 import com.klein.btc.Product;
 import com.klein.ta.Series;
@@ -74,7 +75,7 @@ public class GdaxBot implements WebSocketListener {
     public OrderBook getOrderBook(Product product){
         OrderBook orderBook = orderBooks.get(product);
         if (orderBook==null) {
-            orderBook=new OrderBook(product);
+            orderBook=new OrderBook(Exchange.GDAX, product);
             this.orderBooks.put(product, orderBook);
         }
         return orderBook;

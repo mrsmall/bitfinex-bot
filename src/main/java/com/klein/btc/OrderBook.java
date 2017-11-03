@@ -1,26 +1,39 @@
 package com.klein.btc;
 
-import com.klein.btc.Product;
-
 import java.text.DecimalFormat;
-import java.util.Comparator;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TreeMap;
+import java.util.*;
 
 public class OrderBook {
 
+    private final Exchange exchange;
     private final Product product;
-    private SortedMap<Float, Float> ask=new TreeMap<>();
-    private SortedMap<Float, Float> bid=new TreeMap<>(new Comparator<Float>() {
-        @Override
-        public int compare(Float o1, Float o2) {
-            return -o1.compareTo(o2);
-        }
-    });
+    private final int maxEntries;
+    private SortedMap<Float, Float> ask;
+    private SortedMap<Float, Float> bid;
+    private float minBid=Float.MAX_VALUE;
+    private float minAsk=Float.MAX_VALUE;
+    private float maxBid=0;
+    private float maxAsk=0;
 
-    public OrderBook(Product product) {
+
+    private OrderBookListener orderBookListener;
+
+    public OrderBook(Exchange exchange, Product product, int maxEntries) {
+        this.exchange = exchange;
         this.product = product;
+        this.maxEntries = maxEntries;
+
+        ask=new TreeMap<>();
+        bid=new TreeMap<>();
+
+    }
+
+    public OrderBook(Exchange exchange, Product product) {
+        this(exchange, product, 10);
+    }
+
+    public void setOrderBookListener(OrderBookListener orderBookListener) {
+        this.orderBookListener = orderBookListener;
     }
 
     public Product getProduct() {
@@ -37,10 +50,40 @@ public class OrderBook {
 
     public void addAsk(float price, float size) {
         ask.put(price, size);
+//        System.out.println("Added ASK: "+price);
+
+        if (ask.size()>maxEntries){
+            Float[] askPrices = ask.keySet().toArray(new Float[ask.size()]);
+            minAsk=askPrices[0];
+            maxAsk=askPrices[maxEntries-1];
+            for (int i=maxEntries;i<askPrices.length;i++) {
+                Float itemPrice = askPrices[i];
+                ask.remove(itemPrice);
+//                System.out.println("Removed ASK: "+itemPrice);
+            }
+        } else {
+            minAsk=Math.min(minAsk, price);
+            maxAsk=Math.max(maxAsk, price);
+        }
     }
 
     public void addBid(float price, float size) {
         bid.put(price, size);
+//        System.out.println("Added BID: "+price);
+
+        if (bid.size()>maxEntries){
+            Float[] bidPrices = bid.keySet().toArray(new Float[bid.size()]);
+            maxBid=bidPrices[bidPrices.length-1];
+            minBid=bidPrices[bidPrices.length-maxEntries];
+            for (int i=0;i<bidPrices.length-maxEntries;i++) {
+                Float itemPrice = bidPrices[i];
+                bid.remove(itemPrice);
+//                System.out.println("Removed BID: "+itemPrice);
+            }
+        } else {
+            minBid=Math.min(minBid, price);
+            maxBid=Math.max(maxBid, price);
+        }
     }
 
     public void removeAsk(float price) {
@@ -52,42 +95,47 @@ public class OrderBook {
     }
 
     public void dump(){
+//        echo("\t\t\t");
+//        echo(maxAsk);
+//        echo("\n");
         Float[] askPrices = ask.keySet().toArray(new Float[ask.keySet().size()]);
-        Float[] bidPrices = bid.keySet().toArray(new Float[bid.keySet().size()]);
-        int maxIndex=Math.max(askPrices.length, bidPrices.length);
-        maxIndex=Math.min(maxIndex, 20);
-        for (int i=0;i<maxIndex;i++){
-            if (bidPrices.length>i){
-                float price=bidPrices[i];
-                float size=bid.get(price);
-                echo("\t");
-                echo(price);
-                echo("\t");
-                echo(size);
-            } else {
-                echo("\t\t");
-                echo("\t");
-                echo("\t");
-                echo("\t");
-            }
+        for (int i=askPrices.length-1;i>=0;i--){
             echo("\t");
-            echo("|");
-            if (askPrices.length>i){
-                float price=askPrices[i];
-                float size=ask.get(price);
-                echo("\t\t");
-                echo(price);
-                echo("\t");
-                echo(size);
-            }
+
+            float price=askPrices[i];
+            float size=ask.get(price);
+            echo("\t\t");
+            echo(price);
+            echo("\t");
+            echo(size);
             echo("\n");
         }
-        echo("\n");
-        echo("\n");
+//        echo("\t\t\t");
+//        echo(minAsk);
+//        echo("\n");
+
+//        echo("\t\t\t");
+//        echo(maxBid);
+//        echo("\n");
+        Float[] bidPrices = bid.keySet().toArray(new Float[bid.keySet().size()]);
+        for (int i=bidPrices.length-1;i>=0;i--){
+            float price=bidPrices[i];
+            float size=bid.get(price);
+            echo("\t");
+            echo(size);
+            echo("\t");
+            echo(price);
+            echo("\n");
+        }
+//        echo("\t\t\t");
+//        echo(minBid);
+//        echo("\n");
+//        echo("\n");
+//        echo("\n");
     }
 
     private void echo(float v) {
-        System.out.print(new DecimalFormat("0000.00").format(v));
+        System.out.print(new DecimalFormat("###0.00").format(v));
     }
 
     private void echo(String s) {
