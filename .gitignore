@@ -1,3 +1,4 @@
 bitfinex.iml
 .idea/*
 target/*
+api_key.properties
