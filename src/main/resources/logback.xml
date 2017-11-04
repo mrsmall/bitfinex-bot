@@ -24,6 +24,9 @@
         <appender-ref ref="trade-log" />
         <appender-ref ref="console-debug"/>
     </logger>
+    <logger name="com.klein.btc.TelegramBot" level="trace" additivity="false">
+        <appender-ref ref="console-debug"/>
+    </logger>
     <root level="ERROR">
         <appender-ref ref="console-debug"/>
     </root>
