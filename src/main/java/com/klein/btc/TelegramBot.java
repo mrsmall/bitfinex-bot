@@ -1,24 +1,18 @@
 package com.klein.btc;
 
-import com.klein.btc.bitfinex.BitfinexBot;
-import com.klein.btc.gdax.GdaxBot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.ApiContextInitializer;
 import org.telegram.telegrambots.TelegramBotsApi;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
-import org.telegram.telegrambots.api.methods.updates.GetUpdates;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
-import org.telegram.telegrambots.exceptions.TelegramApiRequestException;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
 
 /**
  * Created by mresc on 04.11.17.
@@ -26,8 +20,10 @@ import java.util.concurrent.TimeUnit;
 public class TelegramBot extends TelegramLongPollingBot {
     private static final Logger LOG = LoggerFactory.getLogger(TelegramBot.class);
     private final Properties props;
+    private Set subsciptions=new HashSet();
 
     public TelegramBot() {
+        super();
         props=new Properties();
         FileInputStream fis= null;
         try {
@@ -39,19 +35,72 @@ public class TelegramBot extends TelegramLongPollingBot {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        SendMessage apiMsg=new SendMessage("@mrSmalll", "Test");
     }
 
     @Override
     public void onUpdateReceived(Update update) {
-        LOG.debug("Telegram update from user: {}:{}", update.getMessage().getFrom().getId(), update.getMessage().getFrom().getUserName());
+        Integer senderId = update.getMessage().getFrom().getId();
+        String senderUsername = update.getMessage().getFrom().getUserName();
+        String text=update.getMessage().getText();
+        LOG.debug("Update from user: {}:{} - {}", senderId, senderUsername, text);
+        if (update.getMessage().hasText()){
+            if (update.getMessage().isCommand()){
+                if (text.startsWith("/subscribe_opportunities")){
+                    LOG.debug("Received subscription commnad from: {}:{}", senderId, senderUsername);
+                    processSubscriptionCommand(update.getMessage().getChatId());
+                } else if (text.startsWith("/unsubscribe_opportunities")){
+                    LOG.debug("Received unsubscribe commnad from: {}:{}", senderId, senderUsername);
+                    processUnsubscriptionCommand(update.getMessage().getChatId());
+                } else if (text.startsWith("/help")){
+                    LOG.debug("Received help commnad from: {}:{}", senderId, senderUsername);
+                    sendHelp(update.getMessage().getChatId());
+                }
+            }
+        }
+    }
+
+    private void sendHelp(Long chatId) {
+        sendResponse(chatId, "" +
+                "/help - show me this help =)\n" +
+                "/subscribe_opportunities - send me trade opportunities\n" +
+                "/unsubscribe_opportunities - stop sending me trade opportunities\n" +
+                "");
+    }
+
+    private void processSubscriptionCommand(Long chatId) {
+        if (!subsciptions.contains(chatId)){
+            subsciptions.add(chatId);
+            sendResponse(chatId, "You are subscribed now!");
+        } else {
+            sendResponse(chatId, "You are already subscribed");
+        }
+    }
+
+    private void processUnsubscriptionCommand(Long chatId) {
+        if (subsciptions.contains(chatId)){
+            subsciptions.remove(chatId);
+            sendResponse(chatId, "You are unsubscribed!");
+        } else {
+            sendResponse(chatId, "You are not subscribed");
+        }
+    }
+
+    private void sendResponse(Long chatId, String s) {
+        SendMessage message = new SendMessage() // Create a message object object
+                .setChatId(chatId)
+                .setText(s);
+        try {
+            execute(message); // Sending our message object to user
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void onUpdatesReceived(List<Update> updates) {
-        LOG.debug("Telegram updates: {}", updates.size());
+        LOG.debug("Got updates: {}", updates.size());
         for (Update update : updates) {
-            LOG.debug("Telegram update from user: {}:{}", update.getMessage().getFrom().getId(), update.getMessage().getFrom().getUserName());
+            onUpdateReceived(update);
         }
     }
 
@@ -75,9 +124,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     public static void main(String[] args){
         ApiContextInitializer.init();
         TelegramBotsApi botsApi = new TelegramBotsApi();
-
         TelegramBot bot = new TelegramBot();
-
         try {
             botsApi.registerBot(bot);
         } catch (TelegramApiException e) {
