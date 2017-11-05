@@ -27,7 +27,7 @@
     <logger name="com.klein.btc.TelegramBot" level="trace" additivity="false">
         <appender-ref ref="console-debug"/>
     </logger>
-    <root level="ERROR">
+    <root level="DEBUG">
         <appender-ref ref="console-debug"/>
     </root>
 </configuration>
