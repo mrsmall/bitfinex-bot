@@ -1,4 +1,4 @@
-package com.klein.btc;
+package com.klein.btc.model;
 
 import java.util.HashMap;
 import java.util.Map;
