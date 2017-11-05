@@ -1,7 +1,7 @@
 package com.klein.btc;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import com.klein.btc.model.ExchangePair;
+import com.klein.btc.model.Product;
 
 /**
  * Created by mresc on 05.11.17.

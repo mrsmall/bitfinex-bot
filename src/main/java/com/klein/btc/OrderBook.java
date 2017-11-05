@@ -1,5 +1,8 @@
 package com.klein.btc;
 
+import com.klein.btc.model.Exchange;
+import com.klein.btc.model.Product;
+
 import java.text.DecimalFormat;
 import java.util.*;
 
