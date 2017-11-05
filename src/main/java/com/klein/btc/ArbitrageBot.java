@@ -2,8 +2,12 @@ package com.klein.btc;
 
 import com.klein.btc.bitfinex.BitfinexBot;
 import com.klein.btc.gdax.GdaxBot;
+import com.klein.btc.model.*;
+import com.klein.btc.repository.TicksRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.ApiContextInitializer;
 
 import java.io.File;
@@ -19,11 +23,15 @@ public class ArbitrageBot implements OrderBookListener {
     private final Product product=Product.BTCUSD;
     private Map<Product, SortedSet<OrderBook>> orderBooks=new HashMap<>();
 
+    @Autowired
+    private TicksRepository ticksRepository;
+
     private Map<ExchangePair, ArbitrageOpportunity> opportunities=new ConcurrentHashMap<>(new HashMap<>());
     private TelegramBot telegramBot;
     private FileOutputStream askBidLogFileStream;
     private long lastAskBidLog=System.currentTimeMillis()+10000;
     private float signalLevel=0.7f;
+    private Map<String, Ticks> ticks=new HashMap<>();
 
     public ArbitrageBot() {
         telegramBot=new TelegramBot();
@@ -38,10 +46,12 @@ public class ArbitrageBot implements OrderBookListener {
         }
     }
 
+    /*
     public static void main(String[] args){
         ApiContextInitializer.init();
         new ArbitrageBot();
     }
+    */
 
     @Override
     public void onAskChanged(OrderBook orderBook, float price, float size) {
@@ -83,28 +93,38 @@ public class ArbitrageBot implements OrderBookListener {
                 }
             }
         }
-        if (System.currentTimeMillis() - lastAskBidLog > 10000) {
-            int i=0;
-            Object[] log = new Object[orderBooks.size()*2+2];
-            log[i++]=df.format(new Date());
-            log[i++]=product.name();
-            for (OrderBook ob1 : orderBooks) {
-                log[i++]=ob1.getBestBid();
-                log[i++]=ob1.getBestAsk();
-            }
-            try {
-                String logString=Arrays.toString(log);
-                logString=logString.substring(1);
-                logString=logString.substring(0, logString.length()-1);
-                logString+=
-                        "\n";
-                askBidLogFileStream.write(logString.getBytes());
-                askBidLogFileStream.flush();
-                lastAskBidLog = System.currentTimeMillis();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+        if (System.currentTimeMillis() - lastAskBidLog > 1000) {
+            for (OrderBook orderBook : orderBooks) {
+                addTick(orderBook.getExchange(), orderBook.getProduct(), orderBook.getBestAsk(), orderBook.getBestBid());
             }
         }
+    }
+
+    private void addTick(Exchange exchange, Product product, float bestAsk, float bestBid) {
+        Ticks ticks=getTicks(exchange, product);
+        int millis=(int) (System.currentTimeMillis()-ticks.getId().getTimestamp());
+        ticks.addTick(millis,bestAsk, bestBid, 0, 0);
+    }
+
+    private Ticks getTicks(Exchange exchange, Product product) {
+        String key=exchange.name()+"_"+product.name();
+        Ticks ticks=this.ticks.get(key);
+        long ts=System.currentTimeMillis();
+        ts=ts-ts%60000;
+        if (ticks==null){
+            ticks=new Ticks();
+            ticks.setId(new TicksId(exchange, product, ts));
+            this.ticks.put(key, ticks);
+        } else {
+            if (ticks.getId().getTimestamp()!=ts){
+                ticksRepository.save(ticks);
+
+                ticks=new Ticks();
+                ticks.setId(new TicksId(exchange, product, ts));
+                this.ticks.put(key, ticks);
+            }
+        }
+        return ticks;
     }
 
     private void addOrderBook(OrderBook orderBook) {
