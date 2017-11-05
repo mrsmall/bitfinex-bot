@@ -140,4 +140,19 @@ public class TelegramBot extends TelegramLongPollingBot {
             sendResponse(chatId, message);
         }
     }
+
+    public void notifyOpportunityIsGone(String product, String exchange1, String exchange2, float diff) {
+        String message="Opportunity is gone "+product+" between "+exchange1+" and "+exchange2+", diffrence "+diff+"% is too low";
+        for (Long chatId : subsciptions) {
+            sendResponse(chatId, message);
+        }
+    }
+
+
+    public void notifyOpportunityGotBetter(String product, String exchange1, String exchange2, float diff) {
+        String message="Opportunity "+product+" between "+exchange1+" and "+exchange2+" got better, new diffrence "+diff+"%";
+        for (Long chatId : subsciptions) {
+            sendResponse(chatId, message);
+        }
+    }
 }
