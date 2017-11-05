@@ -5,6 +5,7 @@ import com.klein.btc.gdax.GdaxBot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
+import org.telegram.telegrambots.ApiContextInitializer;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 
@@ -19,12 +20,17 @@ public class ArbitrageBot implements OrderBookListener {
     private final Product product=Product.BTCUSD;
     private Map<Product, Set<OrderBook>> orderBooks=new HashMap<>();
 
+    TelegramBot telegramBot;
+
     public ArbitrageBot() {
+        telegramBot=new TelegramBot();
+        telegramBot.init();
         BitfinexBot bitfinex = new BitfinexBot(product, this, 0.01, 0.004);
         GdaxBot gdax = new GdaxBot(product, this, 0.01, 0.004);
     }
 
     public static void main(String[] args){
+        ApiContextInitializer.init();
         new ArbitrageBot();
     }
 
@@ -43,6 +49,8 @@ public class ArbitrageBot implements OrderBookListener {
                     float base=Math.min(ob1.getBestAsk(), ob2.getBestBid());
                     float diffRelative=diff*100/base;
                     LOG.debug("{}<->{} diff: {}%",ob1.getExchange(),ob2.getExchange(), diffRelative);
+                    if (diffRelative>0.7)
+                        telegramBot.notifyOpportunity(product.name(), ob1.getExchange().name(), ob2.getExchange().name(), diffRelative);
                 }
             }
         }

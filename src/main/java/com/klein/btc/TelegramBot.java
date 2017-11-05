@@ -20,7 +20,7 @@ import java.util.*;
 public class TelegramBot extends TelegramLongPollingBot {
     private static final Logger LOG = LoggerFactory.getLogger(TelegramBot.class);
     private final Properties props;
-    private Set subsciptions=new HashSet();
+    private Set<Long> subsciptions=new HashSet<>();
 
     public TelegramBot() {
         super();
@@ -33,6 +33,15 @@ public class TelegramBot extends TelegramLongPollingBot {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void init(){
+        TelegramBotsApi botsApi = new TelegramBotsApi();
+        try {
+            botsApi.registerBot(this);
+        } catch (TelegramApiException e) {
             e.printStackTrace();
         }
     }
@@ -122,14 +131,13 @@ public class TelegramBot extends TelegramLongPollingBot {
 
 
     public static void main(String[] args){
-        ApiContextInitializer.init();
-        TelegramBotsApi botsApi = new TelegramBotsApi();
         TelegramBot bot = new TelegramBot();
-        try {
-            botsApi.registerBot(bot);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
     }
 
+    public void notifyOpportunity(String product, String exchange1, String exchange2, float diff) {
+        String message="Opportunity to trade "+product+" between "+exchange1+" and "+exchange2+", diffrence "+diff+"%";
+        for (Long chatId : subsciptions) {
+            sendResponse(chatId, message);
+        }
+    }
 }
