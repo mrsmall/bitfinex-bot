@@ -1,0 +1,125 @@
+<html>
+    <head>
+    </head>
+    <body>
+    <a href="/spread-{{ product }}-{{ exchange2 }}-{{ exchange1 }}-{{ ts1 }}-{{ ts2 }}.html">{{ exchange2 }}<->{{ exchange1 }}</a>
+    <br />
+
+    <a href="/spread-{{ product }}-{{ exchange1 }}-{{ exchange2 }}-{{ ts1_10m }}-{{ ts2 }}.html">10m</a>
+    <a href="/spread-{{ product }}-{{ exchange1 }}-{{ exchange2 }}-{{ ts1_30m }}-{{ ts2 }}.html">30m</a>
+    <a href="/spread-{{ product }}-{{ exchange1 }}-{{ exchange2 }}-{{ ts1_60m }}-{{ ts2 }}.html">1h</a>
+    <a href="/spread-{{ product }}-{{ exchange1 }}-{{ exchange2 }}-{{ ts1_240m }}-{{ ts2 }}.html">4h</a>
+    <a href="/spread-{{ product }}-{{ exchange1 }}-{{ exchange2 }}-{{ ts1_480m }}-{{ ts2 }}.html">8h</a>
+    <a href="/spread-{{ product }}-{{ exchange1 }}-{{ exchange2 }}-{{ ts1_960m }}-{{ ts2 }}.html">16h</a>
+    <br />
+    <a href="/spread-{{ product }}-{{ exchange1 }}-{{ exchange2 }}-{{ ts1_prev }}-{{ ts2_prev }}.html">&lt;&lt;</a>
+    <a href="/spread-{{ product }}-{{ exchange1 }}-{{ exchange2 }}-{{ ts1_next }}-{{ ts2_next }}.html">&gt;&gt;</a>
+    &nbsp;&nbsp;&nbsp;
+    <a id="latestTs" href="#">Latest</a>
+
+        <div id="container" style="width: 75%;">
+            <canvas id="canvas"></canvas>
+        </div>
+        <script language="JavaScript" src="/js/jquery-3.2.1.min.js"></script>
+        <script language="JavaScript" src="/js/Chart.bundle.min.js"></script>
+        <script language="JavaScript">
+            function format00(val) {
+                if (val<10)
+                    val="0"+val;
+                return val;
+            }
+
+            function timeConverter(UNIX_timestamp){
+                var a = new Date(UNIX_timestamp);
+                var year = a.getFullYear()-2000;
+                var month = format00(a.getMonth()+1);
+                var date = format00(a.getDate());
+                var hour = format00(a.getHours());
+                var min = format00(a.getMinutes());
+                var sec = format00(a.getSeconds());
+                var time = date + '.' + month + '.' + year + ' ' + hour + ':' + min + ':' + sec ;
+                return time;
+            }
+
+            function showChart() {
+                var minutes=$('#period').val();
+                var tsFrom=Date.now()-(minutes*60*1000);
+                var tsTill=Date.now();
+                $.get({
+                    url: '/api/arbitrage_spread/{{ product }}/{{ exchange1 }}-{{ exchange2 }}/{{ ts1 }}-{{ ts2 }}',
+                    success: function (json){
+                        var labels=[];
+                        var values=[];
+                        var sma=[];
+                        var bbLow=[];
+                        var bbHigh=[];
+                        for (i in json[0]){
+                            labels.push(timeConverter(json[0][i]));
+                            values.push(json[1][i]);
+                            sma.push(json[2][i]);
+                            bbLow.push(json[3][i]);
+                            bbHigh.push(json[4][i]);
+                        }
+
+                        var datasets=[{
+                            label: 'Spread',
+                            fill: false,
+                            borderColor: "green",
+                            data: values
+                        }, {
+                            label: 'SMA',
+                            fill: false,
+                            borderColor: "blue",
+                            data: sma
+                        }, {
+                            label: 'Std.Dev 2x',
+                            fill: false,
+                            borderColor: "red",
+                            data: bbLow
+                        }, {
+                            label: 'Std.Dev 2x',
+                            fill: false,
+                            borderColor: "red",
+                            data: bbHigh
+                        }];
+                        var barChartData = {
+                            labels: labels,
+                            datasets: datasets
+                        };
+
+                        var ctx = document.getElementById("canvas").getContext("2d");
+                        window.myBar = new Chart(ctx, {
+                            type: 'line',
+                            data: barChartData,
+                            options: {
+                                responsive: true,
+                                legend: {
+                                    position: 'bottom',
+                                },
+                                title: {
+                                    display: false
+                                },
+                                elements: {
+                                    point: {
+                                        radius: 0
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+
+            }
+
+            $(document).ready(function () {
+                showChart();
+                $('#latestTs').on('click', function (e) {
+                    e.preventDefault();
+
+                    var now=Date.now();
+                    window.location.href="/spread-{{ product }}-{{ exchange1 }}-{{ exchange2 }}-"+(now-{{ ts_diff }})+"-"+now+".html";
+                });
+            });
+        </script>
+    </body>
+</html>
