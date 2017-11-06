@@ -93,17 +93,20 @@ public class ArbitrageBot implements OrderBookListener {
                 }
             }
         }
-        if (System.currentTimeMillis() - lastAskBidLog > 1000) {
+        if (System.currentTimeMillis() - lastAskBidLog > 250) {
             for (OrderBook orderBook : orderBooks) {
-                addTick(orderBook.getExchange(), orderBook.getProduct(), orderBook.getBestAsk(), orderBook.getBestBid());
+                addTick(orderBook.getExchange(), orderBook.getProduct(), orderBook.getBestAsk(1f), orderBook.getBestBid(1f));
             }
+            lastAskBidLog=System.currentTimeMillis();
         }
     }
 
     private void addTick(Exchange exchange, Product product, float bestAsk, float bestBid) {
         Ticks ticks=getTicks(exchange, product);
         int millis=(int) (System.currentTimeMillis()-ticks.getId().getTimestamp());
-        ticks.addTick(millis,bestAsk, bestBid, 0, 0);
+        synchronized (ticks){
+            ticks.addTick(millis,bestAsk, bestBid, 0, 0);
+        }
     }
 
     private Ticks getTicks(Exchange exchange, Product product) {
