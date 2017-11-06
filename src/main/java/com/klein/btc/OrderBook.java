@@ -144,9 +144,38 @@ public class OrderBook {
         return minAsk;
     }
 
+    public float getBestAsk(float volNeeded){
+        float volSum=0;
+        float priceSum=0;
+        for (Float price : ask.keySet()) {
+            float vol=ask.get(price);
+            if (volSum<volNeeded){
+                volSum+=vol;
+                priceSum+=price*vol;
+            } else {
+                break;
+            }
+        }
+        return priceSum/volSum;
+    }
+
     public float getBestBid(){
         return maxBid;
     }
+
+    public float getBestBid(float volNeeded){
+        float volSum=0;
+        float priceSum=0;
+        Float[] bidPrices=bid.keySet().toArray(new Float[bid.size()]);
+        for (int i=bidPrices.length-1;i>=0 && volSum<volNeeded;i--) {
+            Float price=bidPrices[i];
+            float vol=bid.get(price);
+            volSum+=vol;
+            priceSum+=price*vol;
+        }
+        return priceSum/volSum;
+    }
+
 
     private void echo(float v) {
         System.out.print(new DecimalFormat("###0.00").format(v));
