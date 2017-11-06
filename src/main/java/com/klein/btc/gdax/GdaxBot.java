@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.util.*;
 
 public class GdaxBot implements WebSocketListener {
-    private static final Logger LOG= LoggerFactory.getLogger("tradelog.gdax");
+    private static final Logger LOG= LoggerFactory.getLogger(GdaxBot.class);
 
     private Map<Product, OrderBook> orderBooks=new HashMap<>();
 

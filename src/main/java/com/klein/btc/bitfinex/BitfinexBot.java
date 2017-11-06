@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.util.*;
 
 public class BitfinexBot implements WebSocketListener {
-    private static final Logger LOG= LoggerFactory.getLogger("tradelog.bitfinex");
+    private static final Logger LOG= LoggerFactory.getLogger(BitfinexBot.class);
 
     private ObjectMapper mapper = new ObjectMapper();
     private TypeReference<HashMap<String,Object>> typeRef = new TypeReference<HashMap<String,Object>>() {};
